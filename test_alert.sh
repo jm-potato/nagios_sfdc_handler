@@ -18,7 +18,6 @@
 #
 
 
-#{'description': 'Notification Type: PROBLEM \n State: CRITICAL\n\n Date/Time: Wed May 31 21:32:07 UTC 2017 \n Host: xvmr10c09mssn04.ds.dtvops.ne t (Address: 10.105.137.129)\n Service: SSH \n Additional Info:\n CRITICAL - Socket timeout after 10 seconds\n \n\n Comment: ', 'state': '090 Critical', 'long_date_time': 'Wed May 31 21:32:07 UTC 2017', 'service_description': 'SSH', 'notif ication_type': 'PROBLEM', 'host_name': 'xvmr10c09mssn04.ds.dtvops.net'}
 
 LONGDATETIME=`date`
 
