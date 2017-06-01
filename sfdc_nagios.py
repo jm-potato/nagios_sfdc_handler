@@ -141,10 +141,9 @@ def main():
     if args.service_description:
         nagios_data['service_description'] = args.service_description
         Alert_ID = '{}--{}'.format(Alert_ID, args.service_description)
-        subject = "{}/{} {}".format(args.host_name, args.service_description,
-                                    args.state)
+        subject = "{}/{}".format(args.host_name, args.service_description)
     else:
-        subject = "{} {}".format(args.host_name, args.state)
+        subject = "{}/host_status".format(args.host_name)
     LOG.debug('Alert_Id: {} '.format(Alert_ID))
 
     sfdc_client = Client(sfdc_oauth2)
@@ -273,6 +272,7 @@ def main():
 
         else:
             # Update Case
+            # If ok, mark case as solved.
             if args.state in ("OK", "UP"):
                 data['Status'] = 'Solved'
                 feed_data_body['Status'] = 'Solved'
@@ -297,6 +297,7 @@ def main():
     # Else If Case did not exist before and was just created
     elif (new_case.status_code == 201):
         LOG.debug("Case was just created")
+
         # Add comment, because Case head should contain LAST data
         # overwritten on any update
         CaseId = new_case.json()['id']
@@ -312,6 +313,14 @@ def main():
         LOG.debug('Add FeedItem status code: {}\nAdd FeedItem '
                   'reply: {} '.format(add_feed_item.status_code,
                                       add_feed_item.text))
+
+        # If OK, mark case as solved.
+        if args.state in ("OK", "UP"):
+            data['Status'] = 'Solved'
+            feed_data_body['Status'] = 'Solved'
+
+        u = sfdc_client.update_case(id=CaseId, data=data)
+        LOG.debug('Update status code: {} '.format(u.status_code))
 
     else:
         LOG.debug("Unexpected error: Case was not created (code !=201) "

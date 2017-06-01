@@ -101,3 +101,38 @@ HOSTOUTPUT="CRITICAL - Host Unreachable (${IP_ADDRESS})"
                                --log_file "nagios_to_sfdc.log"
 
 
+
+#echo "Sending stranded recovery/UP host alert..."
+#
+#NOTIFICATIONTYPE="RECOVERY"
+#STATE="UP"
+#HOSTOUTPUT="CRITICAL - Host Unreachable (${IP_ADDRESS})"
+#/usr/bin/printf "%b" "Notification Type: ${NOTIFICATIONTYPE} \n State: ${STATE}\n\n Date/Time: ${LONGDATETIME} \n Host: ${HOST} (Address: ${IP_ADDRESS})\n Additional Info:\n ${HOSTOUTPUT}\n \n\n Comment: ${COMMENT}" \
+#| ./sfdc_nagios.py \
+#                               -c config.yaml \
+#                               --long_date_time "$LONGDATETIME" \
+#                               --description "-" \
+#                               --host_name "$HOSTNAME" \
+#                               --notification_type "$NOTIFICATIONTYPE" \
+#                               --state ${STATE} \
+#                               --debug \
+#                               --log_file "nagios_to_sfdc.log"
+#
+#sleep 5
+#echo "Sending stranded recovery/OK service alert..."
+#
+#NOTIFICATIONTYPE="PROBLEM"
+#STATE="OK"
+#/usr/bin/printf "%b" "Notification Type: ${NOTIFICATIONTYPE} \n State: ${STATE}\n\n Date/Time: ${LONGDATETIME} \n Host: ${HOST} (Address: ${IP_ADDRESS})\n Service: ${SERVICEDESC} \n Additional Info:\n ${SERVICEOUTPUT}\n \n\n Comment: ${COMMENT}" \
+#| ./sfdc_nagios.py \
+#                               -c config.yaml \
+#                               --long_date_time "$LONGDATETIME" \
+#                               --description "-" \
+#                               --host_name "$HOSTNAME" \
+#                               --service_description "$SERVICEDESC" \
+#                               --notification_type "$NOTIFICATIONTYPE" \
+#                               --state ${STATE} \
+#                               --debug \
+#                               --log_file "nagios_to_sfdc.log"
+#
+#
