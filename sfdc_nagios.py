@@ -13,10 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
-# Configure the Nagios server with the CGI service for passive checks.
-# Configure virtual hosts for monitoring the clusters of global services and nodes
-#
-
 
 
 import logging
@@ -33,43 +29,47 @@ from datetime import datetime
 
 
 LOG = None
-DELTA_SECONDS=3000000000
-#DELTA_SECONDS=1
+DELTA_SECONDS = 3000000000
+
 
 def main():
     parser = ArgumentParser()
     parser.add_argument('-c', '--config-file', default='config.yml')
 
     parser.add_argument('--description', required=True,
-                        help='Description (use "-" to use stdin)' )
+                        help='Description (use "-" to use stdin)')
 
     parser.add_argument('--notification_type', required=True,
-                        help='Notification type (PROBLEM|RECOVERY|CUSTOM). Nagios variable - $NOTIFICATIONTYPE$" ')
+                        help='Notification type (PROBLEM|RECOVERY|CUSTOM). '
+                             'Nagios variable - $NOTIFICATIONTYPE$')
 
     parser.add_argument('--state',  required=True,
-                           help='Service ot Host (OK|WARNING|CRITICAL|UNCKNOWN). Nagios variable - $SERVICESTATE$" or $HOSTSTATE$ ')
+                        help='(OK|UP|WARNING|CRITICAL|UNKNOWN|UNREACHABLE). '
+                             'Nagios variable - $SERVICESTATE$ or $HOSTSTATE$')
 
-    parser.add_argument('--host_name',           required=True,  help='Host name. Nagios variable - $HOSTNAME$')
-    parser.add_argument('--service_description', required=False, help='Service Description. Nagios variable - $SERVICEDESC$')
-    parser.add_argument('--long_date_time',      required=True,  help='Date and time. Nagios variable - $LONGDATETIME$' )
+    parser.add_argument('--host_name', required=True,
+                        help='Nagios variable - $HOSTNAME$')
+    parser.add_argument('--service_description', required=False,
+                        help='Nagios variable - $SERVICEDESC$')
+    parser.add_argument('--long_date_time', required=True,
+                        help='Nagios variable - $LONGDATETIME$')
 
     parser.add_argument('--syslog', action='store_true', default=False,
-                           help='Log to syslog')
+                        help='Log to syslog')
 
     parser.add_argument('--debug', action='store_true', default=False,
-                           help='Enable debug log level')
+                        help='Enable debug log level')
 
     parser.add_argument('--log_file', default=sys.stdout,
-                           help='Log file. default: stdout. Ignored if logging configured to syslog')
-
-
+                        help='Log file. default: stdout. Ignored if '
+                             'logging configured to syslog')
 
     args = parser.parse_args()
 
     LOG = logging.getLogger()
     if args.syslog:
         handler = logging.SysLogHandler()
-    elif (args.log_file != sys.stdout ):
+    elif (args.log_file != sys.stdout):
         handler = logging.FileHandler(args.log_file)
     else:
         handler = logging.StreamHandler(sys.stdout)
@@ -88,12 +88,11 @@ def main():
     LOG.setLevel(log_level)
     LOG.addHandler(handler)
 
-
-# Read from stdin if desctiption defined as '-'
-    if  args.description == '-':
+    # Read from stdin if desctiption defined as '-'
+    if args.description == '-':
         args.description = ''.join(sys.stdin.readlines())
 
-# state are mapped to priority 
+    # state are mapped to priority
     state = {
         'OK':       '060 Informational',
         'UP':       '060 Informational',
@@ -103,7 +102,6 @@ def main():
         'DOWN': '090 Critical',
         'UNREACHABLE': '090 Critical',
         }
-
 
     nagios_data = {
         'state':             state[str(args.state).upper()],
@@ -120,8 +118,6 @@ def main():
 
     LOG.debug('Nagios data: {} '.format(nagios_data))
 
-
-
     with open(args.config_file) as fp:
         config = yaml.load(fp)
 
@@ -135,12 +131,12 @@ def main():
                          username=config['sfdc_username'],
                          password=config['sfdc_password'],
                          auth_url=config['sfdc_auth_url'],
-                         organizationId = organizationId )
+                         organizationId=organizationId)
 
     environment = config['environment']
 
-# Alert ID shoud be uniq for env
-    Alert_ID =  '{}--{}'.format(environment,args.host_name)
+    # Alert ID shoud be uniq for env
+    Alert_ID = '{}--{}'.format(environment, args.host_name)
 
     if args.service_description:
         nagios_data['service_description'] = args.service_description
@@ -149,10 +145,7 @@ def main():
                                     args.state)
     else:
         subject = "{} {}".format(args.host_name, args.state)
-
     LOG.debug('Alert_Id: {} '.format(Alert_ID))
-
-
 
     sfdc_client = Client(sfdc_oauth2)
 
@@ -175,7 +168,6 @@ def main():
         else:
             LOG.debug('Using cached access token.')
 
-
     payload = {
         'notification_type': args.notification_type,
         'description':       args.description,
@@ -192,8 +184,6 @@ def main():
         'Alert_Priority__c': nagios_data['state'],
         'Alert_Host__c':     nagios_data['host_name'],
         'Alert_Service__c':  nagios_data['service_description'],
-
-#        'sort_marker__c': sort_marker,
         }
 
     feed_data_body = {
@@ -205,58 +195,67 @@ def main():
 
         }
 
-
-
     try:
-      new_case = sfdc_client.create_case(data)
+        new_case = sfdc_client.create_case(data)
     except Exception as E:
-       LOG.debug(E)
-       sys.exit(1)
+        LOG.debug(E)
+        sys.exit(1)
 
-
-#    print(new_case)
     LOG.debug('New Caset status code: {} '.format(new_case.status_code))
     LOG.debug('New Case data: {} '.format(new_case.text))
 
+    #  If Case exist
+    if (new_case.status_code == 400) and \
+            (new_case.json()[0]['errorCode'] == 'DUPLICATE_VALUE'):
 
-#  If Case exist
-    if (new_case.status_code  == 400) and (new_case.json()[0]['errorCode'] == 'DUPLICATE_VALUE'):
-        LOG.debug('Code: {}, Error message: {} '.format(new_case.status_code, new_case.text))
+        LOG.debug('Code: {}, Error message: {} '.format(new_case.status_code,
+                                                        new_case.text))
         # Find Case ID
         ExistingCaseId = new_case.json()[0]['message'].split(" ")[-1]
         LOG.debug('ExistingCaseId: {} '.format(ExistingCaseId))
-        # Get Case 
+        # Get Case
         current_case = sfdc_client.get_case(ExistingCaseId).json()
-        LOG.debug("Existing Case: \n {}".format(json.dumps(current_case,sort_keys=True, indent=4)))
+        LOG.debug("Existing Case: \n {}".format(json.dumps(current_case,
+                                                sort_keys=True, indent=4)))
 
-        LastModifiedDate=current_case['LastModifiedDate']
-        ExistingCaseStatus=current_case['Status']
+        LastModifiedDate = current_case['LastModifiedDate']
+        ExistingCaseStatus = current_case['Status']
         feed_data_body['Status'] = ExistingCaseStatus
 
-        Now=datetime.now().replace(tzinfo=None)
+        Now = datetime.now().replace(tzinfo=None)
         delta = Now - dateutil.parser.parse(LastModifiedDate).replace(tzinfo=None)
 
-        LOG.debug("Check if Case should be marked as OUTDATED. Case modification date is: {} , Now: {} , Delta(sec): {}, OutdateDelta(sec): {}".format(LastModifiedDate, Now, delta.seconds, DELTA_SECONDS))
+        LOG.debug("Check if Case should be marked as OUTDATED. Case "
+                  "modification date is: {} , Now: {} , Delta(sec): {}, "
+                  "OutdateDelta(sec): {}".format(LastModifiedDate, Now,
+                                                 delta.seconds, DELTA_SECONDS))
+
         if (delta.seconds > DELTA_SECONDS):
             # Old Case is outdated
+            tmp_date = datetime.strftime(datetime.now(), "%Y.%m.%d-%H:%M:%S")
             new_data = {
-               'Alert_Id__c': '{}_closed_at_{}'.format(current_case['Alert_ID__c'],datetime.strftime(datetime.now(), "%Y.%m.%d-%H:%M:%S")),
+               'Alert_Id__c': '{}_closed_at_{}'.format(current_case['Alert_ID__c'],
+                                                       tmp_date),
                'Alert_Priority__c': '000 OUTDATED',
             }
             u = sfdc_client.update_case(id=ExistingCaseId, data=new_data)
-            LOG.debug('Upate status code: {} \n\nUpate content: {}\n\n Upate headers: {}\n\n'.format(u.status_code,u.content, u.headers))
+            LOG.debug('Update status code: {} \n\nUpdate content: {}'
+                      '\n\n Update headers: {}\n\n'.format(u.status_code,
+                                                           u.content,
+                                                           u.headers))
 
-            # Try to create new caset again 
+            # Try to create new case again
             try:
                 new_case = sfdc_client.create_case(data)
             except Exception as E:
                 LOG.debug(E)
                 sys.exit(1)
             else:
-               # Case was outdated an new was created
+                # Case was outdated an new was created
                 CaseId = new_case.json()['id']
-                LOG.debug("Case was just created, old one was marked as Outdated")
-                # Add commnet, because Case head should conains  LAST data  overriden on any update
+                LOG.debug("Case was just created, old one marked as Outdated")
+                # Add comment, because Case head should contains LAST data
+                # overwritten on any update
                 CaseId = new_case.json()['id']
 
                 feeditem_data = {
@@ -264,9 +263,13 @@ def main():
                   'Visibility': 'AllUsers',
                   'Body': json.dumps(feed_data_body, sort_keys=True, indent=4),
                 }
-                LOG.debug("FeedItem Data: {}".format(json.dumps(feeditem_data, sort_keys=True, indent=4)))
+                LOG.debug("FeedItem Data: {}".format(json.dumps(feeditem_data,
+                                                                sort_keys=True,
+                                                                indent=4)))
                 add_feed_item = sfdc_client.create_feeditem(feeditem_data)
-                LOG.debug('Add FeedItem status code: {} \n Add FeedItem reply: {} '.format(add_feed_item.status_code, add_feed_item.text))
+                LOG.debug('Add FeedItem status code: {}\nAdd FeedItem '
+                          'reply: {}'.format(add_feed_item.status_code,
+                                             add_feed_item.text))
 
         else:
             # Update Case
@@ -276,7 +279,6 @@ def main():
 
             u = sfdc_client.update_case(id=ExistingCaseId, data=data)
             LOG.debug('Upate status code: {} '.format(u.status_code))
-            
 
             feeditem_data = {
                 'ParentId':   ExistingCaseId,
@@ -284,34 +286,43 @@ def main():
                 'Body': json.dumps(feed_data_body, sort_keys=True, indent=4),
             }
 
-            LOG.debug("FeedItem Data: {}".format(json.dumps(feeditem_data, sort_keys=True, indent=4)))
+            LOG.debug("FeedItem Data: {}".format(json.dumps(feeditem_data,
+                                                            sort_keys=True,
+                                                            indent=4)))
             add_feed_item = sfdc_client.create_feeditem(feeditem_data)
-            LOG.debug('Add FeedItem status code: {} \n Add FeedItem reply: {} '.format(add_feed_item.status_code, add_feed_item.text))
+            LOG.debug('Add FeedItem status code: {}\nAdd FeedItem '
+                      'reply: {} '.format(add_feed_item.status_code,
+                                          add_feed_item.text))
 
-# Else If Case did not exist before and was just  created
-    elif  (new_case.status_code  == 201):
+    # Else If Case did not exist before and was just created
+    elif (new_case.status_code == 201):
         LOG.debug("Case was just created")
-        # Add commnet, because Case head should conains  LAST data  overriden on any update
+        # Add comment, because Case head should contain LAST data
+        # overwritten on any update
         CaseId = new_case.json()['id']
         feeditem_data = {
           'ParentId':   CaseId,
           'Visibility': 'AllUsers',
           'Body': json.dumps(feed_data_body, sort_keys=True, indent=4),
         }
-        LOG.debug("FeedItem Data: {}".format(json.dumps(feeditem_data, sort_keys=True, indent=4)))
+        LOG.debug("FeedItem Data: {}".format(json.dumps(feeditem_data,
+                                                        sort_keys=True,
+                                                        indent=4)))
         add_feed_item = sfdc_client.create_feeditem(feeditem_data)
-        LOG.debug('Add FeedItem status code: {} \n Add FeedItem reply: {} '.format(add_feed_item.status_code, add_feed_item.text))
+        LOG.debug('Add FeedItem status code: {}\nAdd FeedItem '
+                  'reply: {} '.format(add_feed_item.status_code,
+                                      add_feed_item.text))
 
     else:
-        LOG.debug("Unexpected error: Case was not created (code !=201) and Case does not exist (code != 400)")
+        LOG.debug("Unexpected error: Case was not created (code !=201) "
+                  "and Case does not exist (code != 400)")
         sys.exit(1)
-
 
     # Write out token/instance_url
     with open(config['token_cache_file'], 'w') as fp:
         fp.write("access: {}\n".format(sfdc_client.access_token))
         fp.write("instance_url: {}\n".format(sfdc_client.instance_url))
 
+
 if __name__ == '__main__':
     main()
-
