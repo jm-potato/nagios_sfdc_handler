@@ -96,10 +96,12 @@ def main():
 # state are mapped to priority 
     state = {
         'OK':       '060 Informational',
+        'UP':       '060 Informational',
         'UNKNOWN':  '070 Unknown',
         'WARNING':  '080 Warning',
         'CRITICAL': '090 Critical',
         'DOWN': '090 Critical',
+        'UNREACHABLE': '090 Critical',
         }
 
 
@@ -268,7 +270,7 @@ def main():
 
         else:
             # Update Case
-            if args.state == "OK":
+            if args.state in ("OK", "UP"):
                 data['Status'] = 'Solved'
                 feed_data_body['Status'] = 'Solved'
 

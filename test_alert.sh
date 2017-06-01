@@ -18,21 +18,24 @@
 #
 
 
-
+#{'description': 'Notification Type: PROBLEM \n State: CRITICAL\n\n Date/Time: Wed May 31 21:32:07 UTC 2017 \n Host: xvmr10c09mssn04.ds.dtvops.ne t (Address: 10.105.137.129)\n Service: SSH \n Additional Info:\n CRITICAL - Socket timeout after 10 seconds\n \n\n Comment: ', 'state': '090 Critical', 'long_date_time': 'Wed May 31 21:32:07 UTC 2017', 'service_description': 'SSH', 'notif ication_type': 'PROBLEM', 'host_name': 'xvmr10c09mssn04.ds.dtvops.net'}
 
 LONGDATETIME=`date`
 
 IP_ADDRESS=`/sbin/ip ro get 8.8.8.8 |  awk '(/src/) { print $7}'`
-HOSTNAME="node-98"
-SERVICEDESC="linux_root_fs"
-NOTIFICATIONTYPE="RECOVERY"
-COMMENT="COMMENT"
-STATE="OK"
+HOSTNAME="node-97-testing"
+SERVICEDESC="SSH"
+SERVICEOUTPUT="CRITICAL - Socket timeout after 10 seconds"
+NOTIFICATIONTYPE="PROBLEM"
+COMMENT=""
+#STATE="OK"
 #STATE="UNCKNOWN"
 #STATE="WARNING"
-#STATE="CRITICAL"
+STATE="CRITICAL"
 
-/usr/bin/printf "%b" "Notification Type: ${NOTIFICATIONTYPE} \n State: OK\n\n Date/Time: ${LONGDATETIME} \n Host: 00-global-clusters-env1 (Address: ${IP_ADDRESS})\n Service: ${SERVICE} \n Additional Info:\n ${SERVICE}%5Cnno+details\n \n\n Comment: ${COMMENT}" \
+
+echo "Sending CRITICAL service alert..."
+/usr/bin/printf "%b" "Notification Type: ${NOTIFICATIONTYPE} \n State: ${STATE}\n\n Date/Time: ${LONGDATETIME} \n Host: ${HOST} (Address: ${IP_ADDRESS})\n Service: ${SERVICEDESC} \n Additional Info:\n ${SERVICEOUTPUT}\n \n\n Comment: ${COMMENT}" \
 | ./sfdc_nagios.py \
                                -c config.yaml \
                                --long_date_time "$LONGDATETIME" \
@@ -45,17 +48,57 @@ STATE="OK"
                                --log_file "nagios_to_sfdc.log"
 
 
+sleep 5
+echo "Sending recovery/OK service alert..."
+
+NOTIFICATIONTYPE="PROBLEM"
+STATE="OK"
+/usr/bin/printf "%b" "Notification Type: ${NOTIFICATIONTYPE} \n State: ${STATE}\n\n Date/Time: ${LONGDATETIME} \n Host: ${HOST} (Address: ${IP_ADDRESS})\n Service: ${SERVICEDESC} \n Additional Info:\n ${SERVICEOUTPUT}\n \n\n Comment: ${COMMENT}" \
+| ./sfdc_nagios.py \
+                               -c config.yaml \
+                               --long_date_time "$LONGDATETIME" \
+                               --description "-" \
+                               --host_name "$HOSTNAME" \
+                               --service_description "$SERVICEDESC" \
+                               --notification_type "$NOTIFICATIONTYPE" \
+                               --state ${STATE} \
+                               --debug \
+                               --log_file "nagios_to_sfdc.log"
 
 
-#/usr/bin/printf "%b" "Notification Type: ${NOTIFICATIONTYPE} \n State: OK\n\n Date/Time: ${LONGDATETIME} \n Host: 00-global-clusters-env1 (Address: ${IP_ADDRESS})\n Service: ${SERVICE} \n Additional Info:\n ${SERVICE}%5Cnno+details\n \n\n Comment: ${COMMENT}" \
-#| ./sfdc_nagios.py \
-#                               -c config.yaml \
-#                               --long_date_time "$LONGDATETIME" \
-#                               --description "-" \
-#                               --host_name "$HOSTNAME" \
-#                               --notification_type "$NOTIFICATIONTYPE" \
-#                               --state ${STATE} \
-#                               --debug \
-#                               --log_file "nagios_to_sfdc.log"
-#
-#
+sleep 5
+echo "Sending DOWN host alert..."
+
+NOTIFICATIONTYPE="PROBLEM"
+STATE="DOWN"
+HOSTOUTPUT="CRITICAL - Host Unreachable (${IP_ADDRESS})"
+/usr/bin/printf "%b" "Notification Type: ${NOTIFICATIONTYPE} \n State: ${STATE}\n\n Date/Time: ${LONGDATETIME} \n Host: ${HOST} (Address: ${IP_ADDRESS})\n Additional Info:\n ${HOSTOUTPUT}\n \n\n Comment: ${COMMENT}" \
+| ./sfdc_nagios.py \
+                               -c config.yaml \
+                               --long_date_time "$LONGDATETIME" \
+                               --description "-" \
+                               --host_name "$HOSTNAME" \
+                               --notification_type "$NOTIFICATIONTYPE" \
+                               --state ${STATE} \
+                               --debug \
+                               --log_file "nagios_to_sfdc.log"
+
+
+sleep 5
+echo "Sending recovery/UP host alert..."
+
+NOTIFICATIONTYPE="RECOVERY"
+STATE="UP"
+HOSTOUTPUT="CRITICAL - Host Unreachable (${IP_ADDRESS})"
+/usr/bin/printf "%b" "Notification Type: ${NOTIFICATIONTYPE} \n State: ${STATE}\n\n Date/Time: ${LONGDATETIME} \n Host: ${HOST} (Address: ${IP_ADDRESS})\n Additional Info:\n ${HOSTOUTPUT}\n \n\n Comment: ${COMMENT}" \
+| ./sfdc_nagios.py \
+                               -c config.yaml \
+                               --long_date_time "$LONGDATETIME" \
+                               --description "-" \
+                               --host_name "$HOSTNAME" \
+                               --notification_type "$NOTIFICATIONTYPE" \
+                               --state ${STATE} \
+                               --debug \
+                               --log_file "nagios_to_sfdc.log"
+
+
