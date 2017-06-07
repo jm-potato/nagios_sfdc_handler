@@ -32,6 +32,11 @@ LOG = None
 DELTA_SECONDS = 3000000000
 
 
+def format_feed_body(data):
+    body = "{}\nStatus: {}".format(data['Description'], data['Status'])
+    return body
+    
+
 def main():
     parser = ArgumentParser()
     parser.add_argument('-c', '--config-file', default='config.yml')
@@ -167,32 +172,32 @@ def main():
         else:
             LOG.debug('Using cached access token.')
 
-    payload = {
-        'notification_type': args.notification_type,
-        'description':       args.description,
-        'long_date_time':    args.long_date_time,
-         }
+    #payload = {
+    #    'notification_type': args.notification_type,
+    #    'description':       args.description,
+    #    'long_date_time':    args.long_date_time,
+    #}
     payload = args.description
 
     data = {
         'IsMosAlert__c':     'true',
-        'Description':       json.dumps(payload, sort_keys=True, indent=4),
+        'Description':       payload,
         'Alert_ID__c':       Alert_ID,
         'Subject':           subject,
         'Environment2__c':   environment,
         'Alert_Priority__c': nagios_data['state'],
         'Alert_Host__c':     nagios_data['host_name'],
         'Alert_Service__c':  nagios_data['service_description'],
-        }
+    }
 
     feed_data_body = {
         'Description':    payload,
-        'Alert_Id':       Alert_ID,
-        'Cloud_ID':       environment,
-        'Alert_Priority': nagios_data['state'],
+        #'Alert_Id':       Alert_ID,
+        #'Cloud_ID':       environment,
+        #'Alert_Priority': nagios_data['state'],
         'Status':         "New",
-
-        }
+    }
+    #feed_data_body = payload
 
     try:
         new_case = sfdc_client.create_case(data)
@@ -200,7 +205,7 @@ def main():
         LOG.debug(E)
         sys.exit(1)
 
-    LOG.debug('New Caset status code: {} '.format(new_case.status_code))
+    LOG.debug('New Case status code: {} '.format(new_case.status_code))
     LOG.debug('New Case data: {} '.format(new_case.text))
 
     #  If Case exist
@@ -260,7 +265,8 @@ def main():
                 feeditem_data = {
                   'ParentId':   CaseId,
                   'Visibility': 'AllUsers',
-                  'Body': json.dumps(feed_data_body, sort_keys=True, indent=4),
+                  #'Body': json.dumps(feed_data_body, sort_keys=True, indent=4),
+                  'Body': format_feed_body(feed_data_body),
                 }
                 LOG.debug("FeedItem Data: {}".format(json.dumps(feeditem_data,
                                                                 sort_keys=True,
@@ -283,7 +289,8 @@ def main():
             feeditem_data = {
                 'ParentId':   ExistingCaseId,
                 'Visibility': 'AllUsers',
-                'Body': json.dumps(feed_data_body, sort_keys=True, indent=4),
+                #'Body': json.dumps(feed_data_body, sort_keys=True, indent=4),
+                'Body': format_feed_body(feed_data_body),
             }
 
             LOG.debug("FeedItem Data: {}".format(json.dumps(feeditem_data,
@@ -301,10 +308,16 @@ def main():
         # Add comment, because Case head should contain LAST data
         # overwritten on any update
         CaseId = new_case.json()['id']
+
+        # If OK, ensure "Solved" is in the first feed.
+        if args.state in ("OK", "UP"):
+            feed_data_body['Status'] = 'Solved'
         feeditem_data = {
           'ParentId':   CaseId,
           'Visibility': 'AllUsers',
-          'Body': json.dumps(feed_data_body, sort_keys=True, indent=4),
+          #'Body': json.dumps(feed_data_body, sort_keys=True, indent=4),
+          'Body': format_feed_body(feed_data_body),
+ 
         }
         LOG.debug("FeedItem Data: {}".format(json.dumps(feeditem_data,
                                                         sort_keys=True,
@@ -317,7 +330,6 @@ def main():
         # If OK, mark case as solved.
         if args.state in ("OK", "UP"):
             data['Status'] = 'Solved'
-            feed_data_body['Status'] = 'Solved'
 
         u = sfdc_client.update_case(id=CaseId, data=data)
         LOG.debug('Update status code: {} '.format(u.status_code))
