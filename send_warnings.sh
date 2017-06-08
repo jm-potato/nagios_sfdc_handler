@@ -47,36 +47,36 @@ HOSTNAME="${1}"
 
 
 SERVICEDESC="linux_system_network_rx"
-SERVICEOUTPUT="linux_system_network_rx OKAY"
-NOTIFICATIONTYPE="RECOVERY"
-STATE="OK"
+SERVICEOUTPUT="linux_system_network_rx WARNING\n Too many received packets have been dropped (WARNING, rule=avg(if_dropped_rx)1000, current=9129.55)"
+NOTIFICATIONTYPE="PROBLEM"
+STATE="WARNING"
 COMMENT=""
 send_service_alert
 
 
 
 SERVICEDESC="linux_system_root_fs"
-SERVICEOUTPUT="linux_system_root_fs OKAY"
-NOTIFICATIONTYPE="RECOVERY"
-STATE="OK"
+SERVICEOUTPUT="The root filesystems free space is too low (WARNING, rule=min(fs_space_percent_free[fs=/])3, current=3.00)"
+NOTIFICATIONTYPE="PROBLEM"
+STATE="WARNING"
 COMMENT=""
 send_service_alert
 
 
 
 SERVICEDESC="zookeeper_server"
-SERVICEOUTPUT="zookeeper_server OKAY"
-NOTIFICATIONTYPE="RECOVERY"
-STATE="OK"
+SERVICEOUTPUT="zookeeper_server DOWN\n There is no zookeeper-server process running (DOWN, rule=last(lma_components_processes[service=zookeeper-server])==0, current=0.00)"
+NOTIFICATIONTYPE="PROBLEM"
+STATE="WARNING"
 COMMENT=""
 send_service_alert
 
 
 
 #SERVICEDESC=""
-#HOSTOUTPUT="PING OK - Packet loss = 0%, RTA = 3.95 ms"
-#NOTIFICATIONTYPE="RECOVERY"
-#STATE="UP"
+#HOSTOUTPUT="CRITICAL - Host Unreachable (1.1.1.1)"
+#NOTIFICATIONTYPE="PROBLEM"
+#STATE="DOWN"
 #COMMENT=""
 #send_host_alert
 #

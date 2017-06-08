@@ -73,10 +73,10 @@ send_service_alert
 
 
 
-SERVICEDESC=""
-HOSTOUTPUT="CRITICAL - Host Unreachable (1.1.1.1)"
-NOTIFICATIONTYPE="PROBLEM"
-STATE="DOWN"
-COMMENT=""
-send_host_alert
-
+#SERVICEDESC=""
+#HOSTOUTPUT="CRITICAL - Host Unreachable (1.1.1.1)"
+#NOTIFICATIONTYPE="PROBLEM"
+#STATE="DOWN"
+#COMMENT=""
+#send_host_alert
+#
