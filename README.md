@@ -17,5 +17,5 @@ Send recovery alerts
 
 `./send_recovery.sh TEST_HOSTNAME_HERE`
 
-Check that Salesforce alerts are now Solved.
+Check that Salesforce alerts are now in 'Auto-solved' status.
 
