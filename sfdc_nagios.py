@@ -97,16 +97,24 @@ def main():
     if args.description == '-':
         args.description = ''.join(sys.stdin.readlines())
 
-    # state are mapped to priority
-    state = {
-        'OK':       '060 Informational',
-        'UP':       '060 Informational',
-        'UNKNOWN':  '070 Unknown',
-        'WARNING':  '080 Warning',
-        'CRITICAL': '090 Critical',
-        'DOWN': '090 Critical',
-        'UNREACHABLE': '090 Critical',
-        }
+    # Read in config file
+    with open(args.config_file) as fp:
+        config = yaml.load(fp)
+
+    # Nagios state is mapped to SF 'alert_priority'
+    # Allow overriding defaults in config file.
+    if 'severity_map' in config:
+        state = config['severity_map']
+    else:
+        state = {
+            'OK':       '060 Informational',
+            'UP':       '060 Informational',
+            'UNKNOWN':  '070 Unknown',
+            'WARNING':  '080 Warning',
+            'CRITICAL': '090 Critical',
+            'DOWN': '090 Critical',
+            'UNREACHABLE': '090 Critical',
+            }
 
     nagios_data = {
         'state':             state[str(args.state).upper()],
@@ -122,9 +130,6 @@ def main():
         nagios_data['service_description'] = ''
 
     LOG.debug('Nagios data: {} '.format(nagios_data))
-
-    with open(args.config_file) as fp:
-        config = yaml.load(fp)
 
     if 'sfdc_organization_id' in config:
         organizationId = config['sfdc_organization_id']
@@ -280,8 +285,8 @@ def main():
             # Update Case
             # If ok, mark case as solved.
             if args.state in ("OK", "UP"):
-                data['Status'] = 'Solved'
-                feed_data_body['Status'] = 'Solved'
+                data['Status'] = 'Auto-solved'
+                feed_data_body['Status'] = 'Auto-solved'
 
             u = sfdc_client.update_case(id=ExistingCaseId, data=data)
             LOG.debug('Upate status code: {} '.format(u.status_code))
@@ -309,9 +314,9 @@ def main():
         # overwritten on any update
         CaseId = new_case.json()['id']
 
-        # If OK, ensure "Solved" is in the first feed.
+        # If OK, ensure "Auto-solved" is in the first feed.
         if args.state in ("OK", "UP"):
-            feed_data_body['Status'] = 'Solved'
+            feed_data_body['Status'] = 'Auto-solved'
         feeditem_data = {
           'ParentId':   CaseId,
           'Visibility': 'AllUsers',
@@ -329,7 +334,7 @@ def main():
 
         # If OK, mark case as solved.
         if args.state in ("OK", "UP"):
-            data['Status'] = 'Solved'
+            data['Status'] = 'Auto-solved'
 
         u = sfdc_client.update_case(id=CaseId, data=data)
         LOG.debug('Update status code: {} '.format(u.status_code))
